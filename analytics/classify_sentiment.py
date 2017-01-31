@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas
+from sklearn.dummy import DummyClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
@@ -63,11 +64,19 @@ FEATURE_NAMES = [
     "RATIO_OF_COMMENTS_BY_COMMENTATOR_ID_ON_GIVEN_MK_POSTS",
     "RATIO_OF_LIKES_BY_COMMENTATOR_ID_ON_GIVEN_MK_POSTS",
 ]
-for c in MLPClassifier, KNeighborsClassifier, SVC, DecisionTreeClassifier, \
-         RandomForestClassifier, AdaBoostClassifier, GaussianNB:
-    clf = c()
+
+
+def classify(clf):
     clf.fit(train[FEATURE_NAMES], train[["ATTITUDE"]].squeeze())
     predicted = clf.predict(test[FEATURE_NAMES])
     difference = test[["ATTITUDE"]].subtract(predicted, axis=0).astype(bool).sum(axis=0)
     score = 1 - difference[0] / test.shape[0]
-    print("%s: %f" % (c.__name__, score))
+    print("%s: %f" % (clf.__class__.__name__, score))
+    return score
+
+CLASSIFIERS = MLPClassifier(), KNeighborsClassifier(), SVC(), DecisionTreeClassifier(), \
+              RandomForestClassifier(), AdaBoostClassifier(), GaussianNB(), DummyClassifier("most_frequent")
+scores = {c: classify(c) for c in CLASSIFIERS}
+plt.bar(range(len(scores)), scores.values(), align='center')
+plt.xticks(range(len(scores)), [c.__class__.__name__ for c in scores], rotation=45)
+plt.show()
