@@ -1,16 +1,20 @@
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas
-from sklearn.neural_network import MLPClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
-from sklearn.gaussian_process import GaussianProcessClassifier
-from sklearn.gaussian_process.kernels import RBF
-from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 
 filename = "data/current_version.csv"
 print("Loading '%s'" % filename)
 df = pandas.read_csv(filename)
+
+hist, _ = np.histogram(df[["ATTITUDE"]].squeeze(), 100)
+print("\n".join("%d: %.1f%%" % (i + 1, 100 * h / hist.sum()) for (i, h) in enumerate(hist) if h))
+
 n = len(df)
 train = df[n//10:]
 test = df[:n//10+1]
