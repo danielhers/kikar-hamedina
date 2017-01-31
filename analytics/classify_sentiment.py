@@ -1,4 +1,11 @@
 import pandas
+from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn.gaussian_process.kernels import RBF
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 
 filename = "data/current_version.csv"
@@ -52,10 +59,11 @@ FEATURE_NAMES = [
     "RATIO_OF_COMMENTS_BY_COMMENTATOR_ID_ON_GIVEN_MK_POSTS",
     "RATIO_OF_LIKES_BY_COMMENTATOR_ID_ON_GIVEN_MK_POSTS",
 ]
-clf = GaussianNB()
-clf.fit(train[FEATURE_NAMES], train[["ATTITUDE"]].squeeze())
-
-predicted = clf.predict(test[FEATURE_NAMES])
-difference = test[["ATTITUDE"]].subtract(predicted, axis=0).astype(bool).sum(axis=0)
-score = 1 - difference[0] / test.shape[0]
-print(score)
+for c in MLPClassifier, KNeighborsClassifier, SVC, DecisionTreeClassifier, \
+         RandomForestClassifier, AdaBoostClassifier, GaussianNB:
+    clf = c()
+    clf.fit(train[FEATURE_NAMES], train[["ATTITUDE"]].squeeze())
+    predicted = clf.predict(test[FEATURE_NAMES])
+    difference = test[["ATTITUDE"]].subtract(predicted, axis=0).astype(bool).sum(axis=0)
+    score = 1 - difference[0] / test.shape[0]
+    print("%s: %f" % (c.__name__, score))
