@@ -21,8 +21,8 @@ hist, _ = np.histogram(df[["ATTITUDE"]].squeeze(), 100)
 print("\n".join("%d: %.1f%%" % (i + 1, 100 * h / hist.sum()) for (i, h) in enumerate(hist) if h))
 
 n = len(df)
-train = df[n//10:]
-test = df[:n//10+1]
+train = df[2*n//10:]
+test = df[n//10+1:2*n//10:]
 
 FEATURE_NAMES = [
     "POST_LEN_MESSAGE",
@@ -79,13 +79,13 @@ def classify(clf):
     return score
 
 CLASSIFIERS = MLPClassifier(), KNeighborsClassifier(), SVC(), DecisionTreeClassifier(), \
-              RandomForestClassifier(bootstrap=True, max_features=10, min_samples_leaf=4,
-                                     min_samples_split=3, criterion="gini", max_depth=3),\
+              RandomForestClassifier(bootstrap=True, max_features=26, min_samples_leaf=6,
+                                     min_samples_split=7, criterion="gini", max_depth=4),\
               AdaBoostClassifier(), GaussianNB(), DummyClassifier()
 scores = {c: classify(c) for c in CLASSIFIERS}
 plt.bar(range(len(scores)), scores.values(), align='center')
 plt.xticks(range(len(scores)), [c.__class__.__name__ for c in scores], rotation=45)
-# plt.show()
+plt.show()
 
 clf = RandomForestClassifier(n_estimators=20)
 
@@ -105,7 +105,7 @@ def report(results, n_top=3):
 
 # specify parameters and distributions to sample from
 param_dist = {"max_depth": [2, 3, 4, 5, None],
-              "max_features": sp_randint(1, 21),
+              "max_features": sp_randint(1, 31),
               "min_samples_split": sp_randint(2, 11),
               "min_samples_leaf": sp_randint(1, 11),
               "bootstrap": [True, False],
