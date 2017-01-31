@@ -1,8 +1,12 @@
+from time import time
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas
+from scipy.stats import randint as sp_randint
 from sklearn.dummy import DummyClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.model_selection import RandomizedSearchCV
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
@@ -71,12 +75,49 @@ def classify(clf):
     predicted = clf.predict(test[FEATURE_NAMES])
     difference = test[["ATTITUDE"]].subtract(predicted, axis=0).astype(bool).sum(axis=0)
     score = 1 - difference[0] / test.shape[0]
-    print("%s: %f" % (clf.__class__.__name__, score))
+    print("%s: %f" % (clf, score))
     return score
 
 CLASSIFIERS = MLPClassifier(), KNeighborsClassifier(), SVC(), DecisionTreeClassifier(), \
-              RandomForestClassifier(), AdaBoostClassifier(), GaussianNB(), DummyClassifier("most_frequent")
+              RandomForestClassifier(bootstrap=True, max_features=10, min_samples_leaf=4,
+                                     min_samples_split=3, criterion="gini", max_depth=3),\
+              AdaBoostClassifier(), GaussianNB(), DummyClassifier()
 scores = {c: classify(c) for c in CLASSIFIERS}
 plt.bar(range(len(scores)), scores.values(), align='center')
 plt.xticks(range(len(scores)), [c.__class__.__name__ for c in scores], rotation=45)
-plt.show()
+# plt.show()
+
+clf = RandomForestClassifier(n_estimators=20)
+
+
+# Utility function to report best scores
+def report(results, n_top=3):
+    for i in range(1, n_top + 1):
+        candidates = np.flatnonzero(results['rank_test_score'] == i)
+        for candidate in candidates:
+            print("Model with rank: {0}".format(i))
+            print("Mean validation score: {0:.3f} (std: {1:.3f})".format(
+                  results['mean_test_score'][candidate],
+                  results['std_test_score'][candidate]))
+            print("Parameters: {0}".format(results['params'][candidate]))
+            print("")
+
+
+# specify parameters and distributions to sample from
+param_dist = {"max_depth": [2, 3, 4, 5, None],
+              "max_features": sp_randint(1, 21),
+              "min_samples_split": sp_randint(2, 11),
+              "min_samples_leaf": sp_randint(1, 11),
+              "bootstrap": [True, False],
+              "criterion": ["gini", "entropy"]}
+
+# run randomized search
+n_iter_search = 200
+random_search = RandomizedSearchCV(clf, param_distributions=param_dist,
+                                   n_iter=n_iter_search)
+
+start = time()
+random_search.fit(train[FEATURE_NAMES], train[["ATTITUDE"]].squeeze())
+print("RandomizedSearchCV took %.2f seconds for %d candidates"
+      " parameter settings." % ((time() - start), n_iter_search))
+report(random_search.cv_results_)
