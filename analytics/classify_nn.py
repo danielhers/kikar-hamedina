@@ -3,7 +3,7 @@ import numpy as np
 import pandas
 
 filename = "data/current_version.csv"
-print("Loading '%s'" % filename)
+print("Loading '%s'..." % filename)
 df = pandas.read_csv(filename)
 
 n = len(df)
@@ -58,51 +58,51 @@ FEATURE_NAMES = [
 y_vals = sorted(list(set(map(int, df[["ATTITUDE"]].get_values()))))
 y_size = max(y_vals) + 1
 
-LAYERS = 2
+LAYERS = 1
 LAYER_DIM = 50
 DROPOUT = .5
 ITERATIONS = 100
 
 m = dy.Model()
-sgd = dy.SimpleSGDTrainer(m)
+sgd = dy.AdamTrainer(m)
 
-pW = []
-pb = []
-for i in range(LAYERS):
-    in_dim = len(FEATURE_NAMES) if i == 0 else LAYER_DIM
-    out_dim = LAYER_DIM if i < LAYERS else y_size
-    pW.append(m.add_parameters((out_dim, in_dim)))
-    pb.append(m.add_parameters(out_dim))
+dims = [LAYER_DIM] * (LAYERS - 1)
+in_dim = [len(FEATURE_NAMES)] + dims
+out_dim = dims + [y_size]
+pW, pb = [list(map(m.add_parameters, d)) for d in (zip(out_dim, in_dim), out_dim)]
 
 
 def evaluate(features):
     x = dy.inputVector(features)
-    for i in range(LAYERS):
-        W = dy.parameter(pW[i])
-        b = dy.parameter(pb[i])
+    for W, b in zip(*[map(dy.parameter, p) for p in (pW, pb)]):
         x = dy.dropout(x, DROPOUT)
         x = dy.tanh(W * x + b)
     return x
 
 
-for iter in range(ITERATIONS):
-    print("iteration %d" % (iter + 1))
-    # np.random.shuffle(train)
-    for i, sample in enumerate(train[FEATURE_NAMES + ["ATTITUDE"]].get_values()):
-        out = evaluate(sample[:-1])
-        loss = dy.pickneglogsoftmax(out, int(sample[-1]))
-        loss.value()
-        loss.backward()
-        sgd.update()
-    sgd.update_epoch()
+def predict():
+    probs = []
+    for sample in test[FEATURE_NAMES].get_values():
+        out = evaluate(sample)
+        y = dy.softmax(out).value()
+        probs.append(y)
+    y_pred = np.argmax(probs, axis=1)
+    y = list(map(int, test[["ATTITUDE"]].get_values()))
+    acc = np.mean(y_pred == y)
+    print("accuracy = %.3f" % acc)
 
-probs = []
-for sample in test[FEATURE_NAMES].get_values():
-    out = evaluate(sample)
-    y = dy.softmax(out).value()
-    probs.append(y)
 
-y_pred = np.argmax(probs, axis=1)
-y = list(map(int, test[["ATTITUDE"]].get_values()))
-acc = np.mean(y_pred == y)
-print("accuracy = %.3f" % acc)
+def learn():
+    for iteration in range(ITERATIONS):
+        print("iteration %d " % (iteration + 1), end="")
+        # np.random.shuffle(train)
+        for i, sample in enumerate(train[FEATURE_NAMES + ["ATTITUDE"]].get_values()):
+            out = evaluate(sample[:-1])
+            loss = dy.pickneglogsoftmax(out, int(sample[-1]))
+            loss.value()
+            loss.backward()
+            sgd.update()
+        sgd.update_epoch()
+        predict()
+
+learn()
