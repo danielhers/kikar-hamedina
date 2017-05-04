@@ -6,9 +6,10 @@ filename = "data/current_version.csv"
 print("Loading '%s'..." % filename)
 df = pandas.read_csv(filename)
 
+df = df.sample(frac=1, random_state=1).reset_index(drop=True)
 n = len(df)
-train = df[2 * n // 10:]
-test = df[n // 10 + 1:2 * n // 10:]
+train = df[2 * n // 10:]  # all but the first 1/5
+test = df[n // 10 + 1:2 * n // 10:]  # the first 1/5 without the first 1/10 (which is kept unseen)
 
 FEATURE_NAMES = [
     "POST_LEN_MESSAGE",
@@ -64,7 +65,7 @@ DROPOUT = .5
 ITERATIONS = 100
 
 m = dy.Model()
-sgd = dy.AdamTrainer(m)
+trainer = dy.AdamTrainer(m)
 
 dims = [LAYER_DIM] * (LAYERS - 1)
 in_dim = [len(FEATURE_NAMES)] + dims
@@ -101,8 +102,8 @@ def learn():
             loss = dy.pickneglogsoftmax(out, int(sample[-1]))
             loss.value()
             loss.backward()
-            sgd.update()
-        sgd.update_epoch()
+            trainer.update()
+        trainer.update_epoch()
         predict()
 
 learn()
